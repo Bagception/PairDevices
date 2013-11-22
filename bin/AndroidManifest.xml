@@ -17,12 +17,15 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name="de.uniulm.bagception.bluetoothClient.UI.MainActivity"
+            android:name="de.uniulm.bagception.bluetoothClient.UI.AddNewBagStartActivity"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="de.uniulm.bagception.bluetoothClient.UI.AddNewBagStartActivity" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <activity

@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import com.example.addnewbag.R;
 
-import de.uniulm.bagception.bluetoothClient.UI.MainActivity;
+import de.uniulm.bagception.bluetoothClient.UI.AddNewBagStartActivity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
@@ -26,9 +26,9 @@ public class ManageConnection extends AsyncTask<BluetoothDevice, Integer, Void> 
 	public static final String BT_UUID = "1bcc9340-2c29-11e3-8224-0800200c9a66";
 	public String new_BLUETOOTH_DEVICE;
 
-	public MainActivity context;
+	public AddNewBagStartActivity context;
 
-	public ManageConnection(MainActivity c) {
+	public ManageConnection(AddNewBagStartActivity c) {
 		context = c;
 	}
 

@@ -30,7 +30,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity {
+public class AddNewBagStartActivity extends Activity {
 
 	private static final int REQUEST_ENABLE_BT = 1;
 	private final String TAG = getClass().getName();
@@ -43,12 +43,16 @@ public class MainActivity extends Activity {
 	TextView noPairedDevices;
 	ArrayAdapter<BluetoothDevice> arrayAdapterDiscoveredDevices;
 	ArrayAdapter<BluetoothDevice> arrayAdapterPairedDevices;
-	private volatile int bt_sdp_count=0;
+	private volatile int bt_sdp_count = 0;
 	private final ArrayList<BluetoothDevice> discoveredDevices = new ArrayList<BluetoothDevice>();
 	private final String SAVED_SCANNED_BT_DEVICES = "de.uniulm.bagception.extras.savedDevices";
 	int checkListView;
 	private ProgressDialog dialog;
-	
+
+	/**
+	 * @author Bianca Strobel Two ListViews are created: One to show the paired
+	 *         Devices and one to show the new detected devices.
+	 */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -78,10 +82,11 @@ public class MainActivity extends Activity {
 					public void onItemClick(android.widget.AdapterView<?> arg0,
 							View arg1, int arg2, long arg3) {
 						checkListView = 0;
-						handleListViewDiscoveredDevicesClick(arrayAdapterDiscoveredDevices.getItem(arg2));
+						handleListViewDiscoveredDevicesClick(arrayAdapterDiscoveredDevices
+								.getItem(arg2));
 					};
 				});
-		
+
 		listviewPairedDevices.setClickable(true);
 		listviewPairedDevices
 				.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -89,11 +94,40 @@ public class MainActivity extends Activity {
 					public void onItemClick(android.widget.AdapterView<?> arg0,
 							View arg1, int arg2, long arg3) {
 						checkListView = 1;
-						handleListViewPairedDevicesClick(arrayAdapterPairedDevices.getItem(arg2));
+						handleListViewPairedDevicesClick(arrayAdapterPairedDevices
+								.getItem(arg2));
 					};
 				});
-		
-		
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.main, menu);
+		return true;
+	}
+
+	// adds the broadcast actions
+	@Override
+	protected void onResume() {
+		super.onResume();
+		// Register the BroadcastReceiver
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(BluetoothDevice.ACTION_FOUND);
+		filter.addAction(BluetoothDevice.ACTION_UUID);
+		filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
+		filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
+		registerReceiver(mReceiver, filter);
+		arrayAdapterDiscoveredDevices.notifyDataSetChanged();
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+		if (dialog != null) {
+			dialog.dismiss();
+		}
+		unregisterReceiver(mReceiver);
 	}
 
 	public void updatePairedDevices() {
@@ -117,32 +151,23 @@ public class MainActivity extends Activity {
 		}
 	}
 
+	// Starts the asynctask for the pairing and connection
 	public void handleListViewDiscoveredDevicesClick(BluetoothDevice device) {
 		Log.d(TAG, "bla test");
 		if (arrayAdapterDiscoveredDevices.getCount() > 0) {
 			listviewDiscoveredDevices.setClickable(true);
-			ManageConnection mg = new ManageConnection(MainActivity.this);
+			ManageConnection mg = new ManageConnection(AddNewBagStartActivity.this);
 			mg.execute(device);
 		} else {
 			listviewDiscoveredDevices.setClickable(false);
 		}
 	}
-	
-	public void devicesSuccessfullyPaired(BluetoothDevice d){
-		arrayAdapterPairedDevices.add(d);
-		arrayAdapterDiscoveredDevices.remove(d);
-		Toast.makeText(this, "Pairing successfull", Toast.LENGTH_SHORT).show();
-	}
 
-	public void devicesNotPaired(BluetoothDevice d){
-		
-		Toast.makeText(this, "Pairing failed", Toast.LENGTH_SHORT).show();
-		
-	}
+	// should start the connection to a paired device. (Other App?)
 	public void handleListViewPairedDevicesClick(BluetoothDevice device) {
 		if (arrayAdapterPairedDevices.getCount() > 0) {
 			listviewDiscoveredDevices.setClickable(true);
-			ManageConnection mg = new ManageConnection(MainActivity.this);
+			ManageConnection mg = new ManageConnection(AddNewBagStartActivity.this);
 			Log.d(TAG, device.getName() + "ist eigtl da");
 			mg.execute(device);
 		} else {
@@ -150,71 +175,56 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
+	// Toasts if the devices are successfully paired
+	public void devicesSuccessfullyPaired(BluetoothDevice d) {
+		arrayAdapterPairedDevices.add(d);
+		arrayAdapterDiscoveredDevices.remove(d);
+		Toast.makeText(this, "Pairing successfull", Toast.LENGTH_SHORT).show();
+	}
+
+	// Toasts if the pairing failed
+	public void devicesNotPaired(BluetoothDevice d) {
+		Toast.makeText(this, "Pairing failed", Toast.LENGTH_SHORT).show();
 	}
 
 	@Override
-	protected void onResume() {
-		// TODO Auto-generated method stub
-		super.onResume();
-		// Register the BroadcastReceiver
-		IntentFilter filter = new IntentFilter();
-		filter.addAction(BluetoothDevice.ACTION_FOUND);
-		filter.addAction(BluetoothDevice.ACTION_UUID);
-		filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-		filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-		registerReceiver(mReceiver, filter);
-		arrayAdapterDiscoveredDevices.notifyDataSetChanged();
-	}
-	
-	@Override
 	protected void onSaveInstanceState(Bundle outState) {
-		BluetoothDevice[] devices = new BluetoothDevice[arrayAdapterDiscoveredDevices.getCount()];
-		for (int i=0;i<arrayAdapterDiscoveredDevices.getCount(); i++){
-			devices[i]=arrayAdapterDiscoveredDevices.getItem(i);
+		BluetoothDevice[] devices = new BluetoothDevice[arrayAdapterDiscoveredDevices
+				.getCount()];
+		for (int i = 0; i < arrayAdapterDiscoveredDevices.getCount(); i++) {
+			devices[i] = arrayAdapterDiscoveredDevices.getItem(i);
 		}
 		outState.putParcelableArray(SAVED_SCANNED_BT_DEVICES, devices);
 		super.onSaveInstanceState(outState);
 
 	}
-	
+
 	@Override
 	protected void onRestoreInstanceState(Bundle savedInstanceState) {
 		super.onRestoreInstanceState(savedInstanceState);
-		
-		if (savedInstanceState!=null){
-			BluetoothDevice[] devices = (BluetoothDevice[])savedInstanceState.getParcelableArray(SAVED_SCANNED_BT_DEVICES);
-			for (int i=0;i<devices.length; i++){				
+
+		if (savedInstanceState != null) {
+			BluetoothDevice[] devices = (BluetoothDevice[]) savedInstanceState
+					.getParcelableArray(SAVED_SCANNED_BT_DEVICES);
+			for (int i = 0; i < devices.length; i++) {
 				arrayAdapterDiscoveredDevices.add(devices[i]);
 			}
 			arrayAdapterDiscoveredDevices.notifyDataSetChanged();
 		}
-		
+
 	}
 
-	@Override
-	protected void onPause() {
-		// TODO Auto-generated method stub
-		super.onPause();
-		if (dialog != null){
-			dialog.dismiss();
-		}
-		unregisterReceiver(mReceiver);
-	}
-
+	// Starts the discovery for new devices
 	public void onScanClick(View view) {
 		BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
 		discoveredDevices.clear();
-		bt_sdp_count=0;
+		bt_sdp_count = 0;
 		arrayAdapterDiscoveredDevices.clear();
 		arrayAdapterDiscoveredDevices.notifyDataSetChanged();
 		bluetoothAdapter.startDiscovery();
 	}
 
+	
 	final BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		@Override
 		public synchronized void onReceive(Context context, Intent intent) {
@@ -227,9 +237,10 @@ public class MainActivity extends Activity {
 				BluetoothDevice device = intent
 						.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				Log.d(TAG, device + " the extra device");
-				if (discoveredDevices.contains(device)) return;
+				if (discoveredDevices.contains(device))
+					return;
 				discoveredDevices.add(device);
-				
+
 			} else if (intent.getAction().equals(
 					BluetoothAdapter.ACTION_DISCOVERY_FINISHED)) {
 				Log.d(TAG, "Nach UUIDs suchen");
@@ -238,51 +249,58 @@ public class MainActivity extends Activity {
 				// device discovery finished
 				for (BluetoothDevice d : discoveredDevices) {
 					Log.d(TAG, d + " device");
-					if(d.fetchUuidsWithSdp()){
-						//sdp successful
+					if (d.fetchUuidsWithSdp()) {
+						// sdp successful
 						bt_sdp_count++;
-						Log.d(TAG, "count up device..."+bt_sdp_count);
+						Log.d(TAG, "count up device..." + bt_sdp_count);
 					}
-					
+
 				}
 			} else if (intent.getAction().equals(BluetoothDevice.ACTION_UUID)) {
 				bt_sdp_count--;
-				Log.d(TAG, "count down device..."+bt_sdp_count);
-				BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+				Log.d(TAG, "count down device..." + bt_sdp_count);
+				BluetoothDevice device = intent
+						.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				Parcelable[] extras = intent
 						.getParcelableArrayExtra(BluetoothDevice.EXTRA_UUID);
-				if (extras != null){
+				if (extras != null) {
 					ParcelUuid[] uuid = new ParcelUuid[extras.length];
-					
+
 					for (int i = 0; i < extras.length; i++) {
 						uuid[i] = (ParcelUuid) extras[i];
 						Log.d(TAG, " " + uuid[i].toString());
 
-						if (uuid[i].getUuid().toString().equalsIgnoreCase(BT_UUID)) {
+						if (uuid[i].getUuid().toString()
+								.equalsIgnoreCase(BT_UUID)) {
 							Log.d(TAG, "add the device now");
-							if (arrayAdapterDiscoveredDevices.getPosition(device)!=-1) return;
-							if (arrayAdapterPairedDevices.getPosition(device)!=-1) return;
+							if (arrayAdapterDiscoveredDevices
+									.getPosition(device) != -1)
+								return;
+							if (arrayAdapterPairedDevices.getPosition(device) != -1)
+								return;
 							arrayAdapterDiscoveredDevices.add(device);
 						}
 
-					}	
+					}
 				}
-				
-				if (bt_sdp_count<=0){
+
+				if (bt_sdp_count <= 0) {
 					Log.d(TAG, "SDP finished");
-					if (dialog == null) return;
+					if (dialog == null)
+						return;
 					dialog.dismiss();
 					setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
 
 				}
-				
-			}else if (intent.getAction().equals(BluetoothAdapter.ACTION_DISCOVERY_STARTED)) {
-				bt_sdp_count=0;
+
+			} else if (intent.getAction().equals(
+					BluetoothAdapter.ACTION_DISCOVERY_STARTED)) {
+				bt_sdp_count = 0;
 				setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
-				dialog=ProgressDialog.show(MainActivity.this, "scanning..", "Please wait... I'm scanning for devices..");
+				dialog = ProgressDialog.show(AddNewBagStartActivity.this, "scanning..",
+						"Please wait... I'm scanning for devices..");
 			}
-				 
-				 
+
 		}
 	};
 
